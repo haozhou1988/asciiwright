@@ -1,5 +1,7 @@
 # asciiwright
 
+[![R-CMD-check](https://github.com/haozhou1988/asciiwright/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/haozhou1988/asciiwright/actions/workflows/R-CMD-check.yaml)
+
 `asciiwright` 是一个最小可用的 R 包原型，用来生成 Winsteps 风格的 ASCII Wright map。
 
 它做的事情是：
