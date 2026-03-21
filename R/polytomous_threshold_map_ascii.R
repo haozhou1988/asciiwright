@@ -214,6 +214,48 @@ threshold_mode_title <- function(mode = c("halfpoint", "thurstonian", "andrich",
   paste(item_title, "-", suffix)
 }
 
+resolve_threshold_table_style <- function(table_style) {
+  switch(
+    table_style,
+    custom = list(
+      mode = NULL,
+      defaults = list()
+    ),
+    `table1.5` = list(
+      mode = "halfpoint",
+      defaults = list(
+        person_display = "distribution",
+        item_display = "labels",
+        label_width = 24L
+      )
+    ),
+    `table1.6` = list(
+      mode = "thurstonian",
+      defaults = list(
+        person_display = "distribution",
+        item_display = "labels",
+        label_width = 24L
+      )
+    ),
+    `table1.7` = list(
+      mode = "andrich",
+      defaults = list(
+        person_display = "distribution",
+        item_display = "labels",
+        label_width = 24L
+      )
+    ),
+    `table1.8` = list(
+      mode = "center",
+      defaults = list(
+        person_display = "distribution",
+        item_display = "labels",
+        label_width = 24L
+      )
+    )
+  )
+}
+
 #' Create a Winsteps-style polytomous threshold Wright map
 #'
 #' @param persons Numeric vector or data frame of person measures.
@@ -222,6 +264,9 @@ threshold_mode_title <- function(mode = c("halfpoint", "thurstonian", "andrich",
 #'   vector, a matrix/data frame with one row per item, or a list with one
 #'   numeric vector per item. Thresholds are Rasch-Andrich thresholds relative
 #'   to item difficulty.
+#' @param table_style Optional Winsteps-inspired preset. `"table1.5"` to
+#'   `"table1.8"` map directly to the main threshold variants. `"custom"`
+#'   leaves the mode and display settings unchanged.
 #' @param mode Which polytomous map to produce: `"halfpoint"` (Table 1.5-like),
 #'   `"thurstonian"` (Table 1.6-like), `"andrich"` (Table 1.7-like), or
 #'   `"center"` (Table 1.8-like).
@@ -230,13 +275,15 @@ threshold_mode_title <- function(mode = c("halfpoint", "thurstonian", "andrich",
 #' @param high_adj Adjustment for the top extreme category in `"center"` mode.
 #' @param person_title Heading shown for the person side.
 #' @param item_title Base heading shown for the item side.
-#' @param ... Additional arguments passed to [wright_map_ascii()].
+#' @param ... Additional arguments passed to [wright_map_ascii()], such as
+#'   `line_length`, `max_page`, `label_abbrev`, or `right_measure`.
 #' @return An object of class `ascii_wright_map`.
 #' @export
 polytomous_threshold_map_ascii <- function(
     persons,
     items,
     steps,
+    table_style = c("custom", "table1.5", "table1.6", "table1.7", "table1.8"),
     mode = c("halfpoint", "thurstonian", "andrich", "center"),
     category_codes = NULL,
     low_adj = 0.25,
@@ -245,8 +292,23 @@ polytomous_threshold_map_ascii <- function(
     item_title = "ITEM",
     ...
 ) {
+  table_style_missing <- missing(table_style)
+  mode_missing <- missing(mode)
+  table_style <- match.arg(table_style)
   mode <- match.arg(mode)
   extra_args <- list(...)
+  preset <- resolve_threshold_table_style(table_style)
+
+  if (table_style != "custom" || !table_style_missing) {
+    if (mode_missing) {
+      mode <- preset$mode
+    }
+    for (nm in names(preset$defaults)) {
+      if (is.null(extra_args[[nm]])) {
+        extra_args[[nm]] <- preset$defaults[[nm]]
+      }
+    }
+  }
 
   expanded_items <- expand_polytomous_items(
     items = items,
@@ -274,11 +336,13 @@ polytomous_threshold_map_ascii <- function(
   map <- do.call(wright_map_ascii, map_args)
 
   map$polytomous <- list(
+    table_style = table_style,
     mode = mode,
     low_adj = low_adj,
     high_adj = high_adj,
     category_codes = if (is.null(category_codes)) NULL else as.character(category_codes),
     step_spec = steps
   )
+  map$settings$polytomous_table_style <- table_style
   map
 }

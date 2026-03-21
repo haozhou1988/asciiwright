@@ -402,6 +402,26 @@ test_that("polytomous_threshold_map_ascii matches Winsteps-style threshold locat
   expect_equal(center$items$measure, c(-2.68, -0.47, 1.74), tolerance = 0.03)
 })
 
+test_that("polytomous_threshold_map_ascii supports table presets, line length, and paging", {
+  pdat <- example_polytomous_data()
+  map <- polytomous_threshold_map_ascii(
+    persons = pdat$persons,
+    items = pdat$items,
+    steps = pdat$steps,
+    table_style = "table1.6",
+    line_length = 60,
+    max_page = 10
+  )
+
+  rendered <- format(map)
+  expect_equal(map$polytomous$table_style, "table1.6")
+  expect_equal(map$polytomous$mode, "thurstonian")
+  expect_equal(map$settings$polytomous_table_style, "table1.6")
+  expect_gt(map$settings$page_count, 1L)
+  expect_true(all(nchar(rendered[rendered != "\f"], type = "width") <= 60))
+  expect_match(format(map, page = 1)[1], "PERSON - MAP - ITEM", fixed = TRUE)
+})
+
 test_that("polytomous_range_map_ascii produces bottom-measure-top columns", {
   pdat <- example_polytomous_data()
   map <- polytomous_range_map_ascii(
@@ -421,6 +441,26 @@ test_that("polytomous_range_map_ascii produces bottom-measure-top columns", {
   expect_true(any(grepl("TOP P=50%", format(map), fixed = TRUE)))
   expect_true(grepl("\\| BOTTOM P=50%", format(map)[1]))
   expect_true(grepl("-\\+-", format(map)[2]))
+})
+
+test_that("polytomous_range_map_ascii supports table preset, line length, and paging", {
+  pdat <- example_polytomous_data()
+  map <- polytomous_range_map_ascii(
+    persons = pdat$persons,
+    items = pdat$items,
+    steps = pdat$steps,
+    table_style = "table1.4",
+    line_length = 72,
+    max_page = 10
+  )
+
+  rendered <- format(map)
+  expect_equal(map$settings$table_style, "table1.4")
+  expect_equal(map$settings$polytomous_table_style, "table1.4")
+  expect_gt(map$settings$page_count, 1L)
+  expect_true(all(nchar(rendered[rendered != "\f"], type = "width") <= 72))
+  expect_match(format(map, page = 1)[1], "BOTTOM", fixed = TRUE)
+  expect_match(format(map, page = 1)[2], "-+-")
 })
 
 test_that("polytomous_range_map_ascii supports side-aware label overrides", {

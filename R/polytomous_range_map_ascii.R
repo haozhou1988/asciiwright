@@ -49,11 +49,11 @@ build_range_direction_line <- function(
     spacer,
     person_strip,
     " -+- ",
-    sprintf("%-*s", item_width, item_title),
+    sprintf("%-*s", item_width, truncate_text(item_title, item_width)),
     " -+- ",
-    sprintf("%-*s", item_width, item_title),
+    sprintf("%-*s", item_width, truncate_text(item_title, item_width)),
     " -+- ",
-    sprintf("%-*s", item_width, paste(item_title, right_label))
+    sprintf("%-*s", item_width, truncate_text(paste(item_title, right_label), item_width))
   )
 }
 
@@ -73,19 +73,90 @@ build_range_header_line <- function(
     spacer,
     sprintf("%*s", person_width + 3L, ""),
     "| ",
-    sprintf("%-*s", item_width, bottom_header),
+    sprintf("%-*s", item_width, truncate_text(bottom_header, item_width)),
     " | ",
-    sprintf("%-*s", item_width, center_header),
+    sprintf("%-*s", item_width, truncate_text(center_header, item_width)),
     " | ",
-    sprintf("%-*s", item_width, top_header),
+    sprintf("%-*s", item_width, truncate_text(top_header, item_width)),
     " |",
     if (isTRUE(right_measure)) sprintf("%*s", measure_col_width + 1L, measure_header) else ""
   )
 }
 
+resolve_range_table_style <- function(table_style) {
+  switch(
+    table_style,
+    custom = list(
+      person_display = "distribution",
+      item_display = "labels",
+      person_width = 18L,
+      item_width = 14L,
+      right_measure = TRUE,
+      preset_line_length = NULL
+    ),
+    `table1.4` = list(
+      person_display = "distribution",
+      item_display = "labels",
+      person_width = 18L,
+      item_width = 14L,
+      right_measure = TRUE,
+      preset_line_length = NULL
+    )
+  )
+}
+
+resolve_range_widths <- function(
+    desired_person_width,
+    desired_item_width,
+    person_mode,
+    item_mode,
+    name_trunc,
+    fixed_width,
+    line_length = NULL
+) {
+  person_width <- as.integer(desired_person_width)
+  item_width <- as.integer(desired_item_width)
+
+  if (is.null(line_length)) {
+    return(list(person_width = person_width, item_width = item_width))
+  }
+
+  if (!is.numeric(line_length) || length(line_length) != 1L || !is.finite(line_length) || line_length < 30) {
+    stop("'line_length' must be NULL or a single number of at least 30.", call. = FALSE)
+  }
+
+  min_person <- if (person_mode == "distribution") 1L else max(4L, min(as.integer(name_trunc), 4L))
+  min_item <- if (item_mode == "distribution") 1L else max(4L, min(as.integer(name_trunc), 4L))
+  available_width <- as.integer(line_length) - fixed_width
+
+  if (available_width < (min_person + 3L * min_item)) {
+    stop("'line_length' is too small for the requested range-map layout.", call. = FALSE)
+  }
+
+  while ((person_width + 3L * item_width) > available_width) {
+    person_excess <- person_width - min_person
+    item_excess <- item_width - min_item
+
+    if (person_excess <= 0L && item_excess <= 0L) {
+      break
+    }
+
+    if (item_excess > 0L && (3L * item_excess >= person_excess || person_excess <= 0L)) {
+      item_width <- item_width - 1L
+    } else if (person_excess > 0L) {
+      person_width <- person_width - 1L
+    } else {
+      item_width <- item_width - 1L
+    }
+  }
+
+  list(person_width = person_width, item_width = item_width)
+}
+
 range_map_ascii_from_points <- function(
     persons,
     range_points,
+    table_style = c("custom", "table1.4"),
     person_display = c("distribution", "labels"),
     item_display = c("distribution", "labels"),
     distribution_style = c("winsteps", "hashdot", "x"),
@@ -109,8 +180,42 @@ range_map_ascii_from_points <- function(
     label_abbrev = c("truncate", "smart"),
     label_overrides = NULL,
     digits = 0L,
-    right_measure = TRUE
+    right_measure = TRUE,
+    line_length = NULL,
+    max_page = NULL,
+    page_break = "\f"
 ) {
+  table_style_missing <- missing(table_style)
+  person_display_missing <- missing(person_display)
+  item_display_missing <- missing(item_display)
+  person_width_missing <- missing(person_width)
+  item_width_missing <- missing(item_width)
+  right_measure_missing <- missing(right_measure)
+  line_length_missing <- missing(line_length)
+
+  table_style <- match.arg(table_style)
+  preset <- resolve_range_table_style(table_style)
+  if (table_style != "custom" || !table_style_missing) {
+    if (person_display_missing) {
+      person_display <- preset$person_display
+    }
+    if (item_display_missing) {
+      item_display <- preset$item_display
+    }
+    if (person_width_missing) {
+      person_width <- preset$person_width
+    }
+    if (item_width_missing) {
+      item_width <- preset$item_width
+    }
+    if (right_measure_missing) {
+      right_measure <- preset$right_measure
+    }
+    if (line_length_missing) {
+      line_length <- preset$preset_line_length
+    }
+  }
+
   person_display <- match.arg(person_display)
   item_display <- match.arg(item_display)
   distribution_style <- match.arg(distribution_style)
@@ -161,6 +266,30 @@ range_map_ascii_from_points <- function(
   range_points$center$row <- measure_to_row(range_points$center$measure, top = upper, step = step, n_rows = n_rows)
   range_points$top$row <- measure_to_row(range_points$top$measure, top = upper, step = step, n_rows = n_rows)
 
+  measure_col_width <- max(
+    7L,
+    nchar(measure_header, type = "width"),
+    max(nchar(formatC(axis_values, format = "f", digits = digits), type = "width"))
+  )
+  spacer <- "  "
+  range_axis <- function(value) if (abs(value - round(value)) < 1e-9) "+" else "|"
+  right_measure_width <- if (isTRUE(right_measure)) measure_col_width + 1L else 0L
+  fixed_width <- max(
+    measure_col_width + nchar(spacer) + 13L + right_measure_width,
+    measure_col_width + nchar(spacer) + 15L
+  )
+  widths <- resolve_range_widths(
+    desired_person_width = person_width,
+    desired_item_width = item_width,
+    person_mode = person_display,
+    item_mode = item_display,
+    name_trunc = name_trunc,
+    fixed_width = fixed_width,
+    line_length = line_length
+  )
+  person_width <- widths$person_width
+  item_width <- widths$item_width
+
   person_side <- build_side_rows(
     data = person_df,
     n_rows = n_rows,
@@ -210,15 +339,6 @@ range_map_ascii_from_points <- function(
     side = "item_top"
   )
 
-  measure_col_width <- max(
-    7L,
-    nchar(measure_header, type = "width"),
-    max(nchar(formatC(axis_values, format = "f", digits = digits), type = "width"))
-  )
-  spacer <- "  "
-  range_axis <- function(value) if (abs(value - round(value)) < 1e-9) "+" else "|"
-  right_measure_width <- if (isTRUE(right_measure)) measure_col_width + 1L else 0L
-
   notes <- c(
     if (person_side$compressed) build_distribution_note(person_title, person_side$hash_size),
     if (bottom_side$compressed) build_distribution_note(paste(item_title, "BOTTOM"), bottom_side$hash_size),
@@ -226,8 +346,8 @@ range_map_ascii_from_points <- function(
     if (top_side$compressed) build_distribution_note(paste(item_title, "TOP"), top_side$hash_size)
   )
 
-  lines <- character(n_rows + 3L + length(notes))
-  lines[1L] <- build_range_header_line(
+  header_lines <- character(2L)
+  header_lines[1L] <- build_range_header_line(
     measure_col_width = measure_col_width,
     spacer = spacer,
     person_width = person_width,
@@ -239,7 +359,7 @@ range_map_ascii_from_points <- function(
     right_measure = right_measure
   )
 
-  lines[2L] <- build_range_direction_line(
+  header_lines[2L] <- build_range_direction_line(
     measure_col_width = measure_col_width,
     spacer = spacer,
     person_width = person_width,
@@ -250,6 +370,7 @@ range_map_ascii_from_points <- function(
     item_title = item_title
   )
 
+  body_lines <- character(n_rows)
   for (i in seq_len(n_rows)) {
     measure_text <- if (abs(axis_values[i] - round(axis_values[i])) < 1e-9) {
       format_measure_label(axis_values[i], digits = digits, width = measure_col_width)
@@ -266,7 +387,7 @@ range_map_ascii_from_points <- function(
       ""
     }
 
-    lines[i + 2L] <- paste0(
+    body_lines[i] <- paste0(
       measure_text,
       spacer,
       person_side$render(i, align = "right"),
@@ -286,8 +407,7 @@ range_map_ascii_from_points <- function(
     )
   }
 
-  bottom_index <- n_rows + 3L
-  lines[bottom_index] <- build_range_direction_line(
+  footer_lines <- build_range_direction_line(
     measure_col_width = measure_col_width,
     spacer = spacer,
     person_width = person_width,
@@ -299,19 +419,34 @@ range_map_ascii_from_points <- function(
   )
 
   if (length(notes)) {
-    for (j in seq_along(notes)) {
-      lines[bottom_index + j] <- paste0(strrep(" ", measure_col_width + nchar(spacer)), notes[j])
-    }
+    footer_lines <- c(
+      footer_lines,
+      vapply(
+        notes,
+        function(note) paste0(strrep(" ", measure_col_width + nchar(spacer)), note),
+        character(1)
+      )
+    )
   }
+
+  pages <- paginate_wright_lines(
+    header_lines = header_lines,
+    body_lines = body_lines,
+    footer_lines = footer_lines,
+    max_page = max_page
+  )
+  lines <- flatten_wright_pages(pages = pages, page_break = page_break)
 
   structure(
     list(
       lines = lines,
+      pages = pages,
       axis_values = axis_values,
       persons = person_df,
       items = range_points$center,
       range_points = range_points,
       settings = list(
+        table_style = table_style,
         measure_range = c(lower, upper),
         person_display = person_display,
         item_display = item_display,
@@ -322,7 +457,11 @@ range_map_ascii_from_points <- function(
         label_abbrev = label_abbrev,
         right_measure = isTRUE(right_measure),
         person_hash_size = person_side$hash_size,
-        item_hash_size = item_hash_size
+        item_hash_size = bottom_side$hash_size,
+        line_length = line_length,
+        max_page = max_page,
+        page_break = page_break,
+        page_count = length(pages)
       )
     ),
     class = "ascii_wright_map"
@@ -336,6 +475,9 @@ range_map_ascii_from_points <- function(
 #' @param steps Step thresholds for each item. This can be a shared numeric
 #'   vector, a matrix/data frame with one row per item, or a list with one
 #'   numeric vector per item.
+#' @param table_style Optional Winsteps-inspired preset. `"table1.4"` applies
+#'   the standard bottom/measure/top layout defaults. `"custom"` leaves the
+#'   explicit arguments untouched.
 #' @param person_display How to draw the person side: `"labels"` or `"distribution"`.
 #' @param item_display How to draw the three item range columns: `"labels"` or
 #'   `"distribution"`.
@@ -366,12 +508,19 @@ range_map_ascii_from_points <- function(
 #'   `"item_bottom"`, `"item_center"`, or `"item_top"`.
 #' @param digits Digits for printed measure labels.
 #' @param right_measure Show a mirrored measure column on the far right.
+#' @param line_length Optional maximum output width, similar to Winsteps
+#'   `LINELENGTH=`.
+#' @param max_page Optional maximum number of output lines per page, similar to
+#'   Winsteps `MAXPAGE=`.
+#' @param page_break Marker inserted between rendered pages when `max_page`
+#'   creates multiple pages.
 #' @return An object of class `ascii_wright_map`.
 #' @export
 polytomous_range_map_ascii <- function(
     persons,
     items,
     steps,
+    table_style = c("custom", "table1.4"),
     person_display = c("distribution", "labels"),
     item_display = c("distribution", "labels"),
     distribution_style = c("winsteps", "hashdot", "x"),
@@ -395,12 +544,17 @@ polytomous_range_map_ascii <- function(
     label_abbrev = c("truncate", "smart"),
     label_overrides = NULL,
     digits = 0L,
-    right_measure = TRUE
+    right_measure = TRUE,
+    line_length = NULL,
+    max_page = NULL,
+    page_break = "\f"
 ) {
+  table_style <- match.arg(table_style)
   range_points <- compute_polytomous_range_points(items = items, steps = steps)
-  range_map_ascii_from_points(
+  map <- range_map_ascii_from_points(
     persons = persons,
     range_points = range_points,
+    table_style = table_style,
     person_display = person_display,
     item_display = item_display,
     distribution_style = distribution_style,
@@ -424,6 +578,15 @@ polytomous_range_map_ascii <- function(
     label_abbrev = label_abbrev,
     label_overrides = label_overrides,
     digits = digits,
-    right_measure = right_measure
+    right_measure = right_measure,
+    line_length = line_length,
+    max_page = max_page,
+    page_break = page_break
   )
+  map$polytomous <- list(
+    table_style = table_style,
+    step_spec = steps
+  )
+  map$settings$polytomous_table_style <- table_style
+  map
 }

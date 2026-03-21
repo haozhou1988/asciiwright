@@ -6,6 +6,7 @@ polytomous_range_map_ascii(
   persons,
   items,
   steps,
+  table_style = c("custom", "table1.4"),
   person_display = c("distribution", "labels"),
   item_display = c("distribution", "labels"),
   distribution_style = c("winsteps", "hashdot", "x"),
@@ -29,13 +30,17 @@ polytomous_range_map_ascii(
   label_abbrev = c("truncate", "smart"),
   label_overrides = NULL,
   digits = 0L,
-  right_measure = TRUE
+  right_measure = TRUE,
+  line_length = NULL,
+  max_page = NULL,
+  page_break = "\f"
 )
 }
 \arguments{
   \item{persons}{Numeric vector or data frame of person measures.}
   \item{items}{Numeric vector or data frame of item measures.}
   \item{steps}{Step thresholds for each item. This can be a shared numeric vector, a matrix/data frame with one row per item, or a list with one numeric vector per item.}
+  \item{table_style}{Optional Winsteps-inspired preset. \code{"table1.4"} applies the standard bottom/measure/top layout defaults. \code{"custom"} leaves the explicit arguments untouched.}
   \item{person_display}{How to draw the person side: \code{"labels"} or \code{"distribution"}.}
   \item{item_display}{How to draw the three item range columns: \code{"labels"} or \code{"distribution"}.}
   \item{distribution_style}{How distribution counts are compacted.}
@@ -60,13 +65,17 @@ polytomous_range_map_ascii(
   \item{label_overrides}{Optional user-supplied label abbreviations. This can be a named character vector of exact replacements or a function. Functions receive \code{label}, \code{width}, and \code{side}, where \code{side} can be \code{"person"}, \code{"item_bottom"}, \code{"item_center"}, or \code{"item_top"}.}
   \item{digits}{Digits for printed measure labels.}
   \item{right_measure}{Show a mirrored measure column on the far right.}
+  \item{line_length}{Optional maximum output width, similar to Winsteps \code{LINELENGTH=}.}
+  \item{max_page}{Optional maximum number of output lines per page, similar to Winsteps \code{MAXPAGE=}.}
+  \item{page_break}{Marker inserted between rendered pages when \code{max_page} creates multiple pages.}
 }
 \value{
 An object of class \code{ascii_wright_map}.
 }
 \description{
 Creates a Table 1.4-like ASCII range map for polytomous items with three item
-columns showing bottom-range, item difficulty, and top-range locations.
+columns showing bottom-range, item difficulty, and top-range locations. The
+renderer can also constrain total line width and paginate long maps.
 }
 \examples{
 pdat <- example_polytomous_data()
@@ -74,9 +83,9 @@ map <- polytomous_range_map_ascii(
   persons = pdat$persons,
   items = pdat$items,
   steps = pdat$steps,
-  person_display = "distribution",
-  item_display = "labels",
-  item_width = 18,
+  table_style = "table1.4",
+  line_length = 80,
+  max_page = 12,
   label_abbrev = "smart",
   label_overrides = c(`Read books on animals` = "Read books animals")
 )

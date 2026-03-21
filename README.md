@@ -19,6 +19,7 @@
 - 提供 `score_table_ascii()`，从 item difficulty 生成 Winsteps Table 20.1 风格的 raw score-to-measure 表
 - 提供 `polytomous_threshold_map_ascii()`，生成 polytomous item 的 half-point / Thurstonian / Andrich / category-center threshold maps
 - 提供 `polytomous_range_map_ascii()`，生成 Table 1.4 风格的 `BOTTOM / MEASURE / TOP` 三列 polytomous range map
+- 这两类 polytomous 图也支持 `line_length`、`max_page` 和对应的 `table_style` 预设
 - 提供 `wright_map_mirt()`，可以直接从 `mirt` 单维模型生成 item / threshold / range 版本的 ASCII map
 - 标签支持 `label_abbrev = "smart"` 智能缩写，也支持 `label_overrides` 让使用者自己指定缩写
 - 提供 `preview_label_abbrev()` 和 `make_label_overrides()`，可以先预览缩写结果，再把手工修改过的标签回灌到 map
@@ -216,9 +217,9 @@ map_poly <- polytomous_threshold_map_ascii(
   persons = pdat$persons,
   items = pdat$items,
   steps = pdat$steps,
-  mode = "halfpoint",
-  person_display = "distribution",
-  label_width = 18,
+  table_style = "table1.5",
+  line_length = 70,
+  max_page = 12,
   label_abbrev = "smart"
 )
 
@@ -234,9 +235,9 @@ map_range <- polytomous_range_map_ascii(
   persons = pdat$persons,
   items = pdat$items,
   steps = pdat$steps,
-  person_display = "distribution",
-  item_display = "labels",
-  item_width = 18,
+  table_style = "table1.4",
+  line_length = 80,
+  max_page = 12,
   label_abbrev = "smart",
   label_overrides = c(`Read books on animals` = "Read books animals")
 )
