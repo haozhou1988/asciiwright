@@ -1,7 +1,7 @@
 Package: asciiwright
 Type: Package
 Title: ASCII Wright Maps in R
-Version: 0.13.0
+Version: 0.14.0
 Author: Codex Assistant [aut, cre]
 Maintainer: Codex Assistant <codex@example.com>
 Authors@R: c(
@@ -15,7 +15,8 @@ Authors@R: c(
 Description: Creates Winsteps-inspired Wright maps as fixed-width ASCII text.
     The package aligns person and item locations on a shared latent-variable
     axis and annotates means and standard deviations in a text layout that
-    works well in terminals, reports, and plain-text outputs.
+    works well in terminals, reports, and plain-text outputs, including
+    mirrored easiness tables, score columns, and paginated console output.
 License: GPL-3
 Encoding: UTF-8
 LazyData: false

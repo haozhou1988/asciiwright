@@ -313,7 +313,7 @@ stat_rows <- function(values, top, step, n_rows) {
   rows
 }
 
-build_axis_cell <- function(axis_value, person_marks, item_marks, axis_style = c("single", "double")) {
+build_axis_cell <- function(axis_value, left_marks, right_marks, axis_style = c("single", "double")) {
   axis_style <- match.arg(axis_style)
   axis_body <- if (abs(axis_value - round(axis_value)) < 1e-9) {
     if (axis_style == "double") "++" else "+"
@@ -322,11 +322,11 @@ build_axis_cell <- function(axis_value, person_marks, item_marks, axis_style = c
   }
   cell <- c(" ", axis_body, " ")
 
-  if (length(person_marks)) {
-    cell[1L] <- person_marks[1L]
+  if (length(left_marks)) {
+    cell[1L] <- left_marks[1L]
   }
-  if (length(item_marks)) {
-    cell[3L] <- item_marks[1L]
+  if (length(right_marks)) {
+    cell[3L] <- right_marks[1L]
   }
 
   paste(cell, collapse = "")
@@ -368,13 +368,14 @@ sort_tokens <- function(tokens) {
 estimate_total_score_measure <- function(
     raw_score,
     item_measures,
+    min_score = 0,
+    max_score = length(item_measures),
     extreme_adjust = 0.3
 ) {
-  max_score <- length(item_measures)
-  target <- max(min(raw_score, max_score), 0)
+  target <- max(min(raw_score, max_score), min_score)
 
-  if (target <= 0) {
-    target <- extreme_adjust
+  if (target <= min_score) {
+    target <- min_score + extreme_adjust
   } else if (target >= max_score) {
     target <- max_score - extreme_adjust
   }
@@ -399,6 +400,8 @@ estimate_total_score_measure <- function(
 estimate_score_measures <- function(
     score_values,
     item_measures,
+    min_score = 0,
+    max_score = length(item_measures),
     extreme_adjust = 0.3
 ) {
   vapply(
@@ -406,6 +409,8 @@ estimate_score_measures <- function(
     estimate_total_score_measure,
     numeric(1),
     item_measures = item_measures,
+    min_score = min_score,
+    max_score = max_score,
     extreme_adjust = extreme_adjust
   )
 }
@@ -419,7 +424,9 @@ build_score_rows <- function(
     digits = 0L,
     method = c("rasch", "observed"),
     item_measures = NULL,
-    extreme_adjust = 0.3
+    extreme_adjust = 0.3,
+    min_score = NULL,
+    max_score = NULL
 ) {
   method <- match.arg(method)
 
@@ -445,10 +452,14 @@ build_score_rows <- function(
     length(item_measures) > 0L
   ) {
     score_values <- vapply(split(data$score[keep], score_labels[keep]), mean, numeric(1))
+    resolved_min_score <- if (is.null(min_score)) 0 else min_score
+    resolved_max_score <- if (is.null(max_score)) length(item_measures) else max_score
     score_positions <- tryCatch(
       estimate_score_measures(
         score_values = score_values,
         item_measures = item_measures,
+        min_score = resolved_min_score,
+        max_score = resolved_max_score,
         extreme_adjust = extreme_adjust
       ),
       error = function(e) NULL
@@ -517,6 +528,15 @@ format_distribution_tokens <- function(
 
   if (!count || width <= 0L) {
     return("")
+  }
+
+  if (width == 1L) {
+    return(switch(
+      style,
+      x = repeat_char,
+      hashdot = if (count >= hash_size) pair_char else single_char,
+      winsteps = if (hash_size <= 1L) repeat_char else if (count >= hash_size) pair_char else single_char
+    ))
   }
 
   raw <- switch(
@@ -634,16 +654,17 @@ build_axis_aligned_line <- function(
     right_text,
     header_width,
     spacer,
-    side_width,
+    left_width,
+    right_width,
     axis_text = "|",
     trailing_width = 0L
 ) {
   paste0(
     strrep(" ", header_width),
     spacer,
-    sprintf("%*s", side_width + 2L, left_text),
+    sprintf("%*s", left_width + 2L, left_text),
     axis_text,
-    sprintf("%-*s", side_width + 2L + trailing_width, right_text)
+    sprintf("%-*s", right_width + 2L + trailing_width, right_text)
   )
 }
 
@@ -659,12 +680,236 @@ build_distribution_note <- function(side_title, hash_size) {
   }
 
   paste0(
+    "EACH \"#\" IN THE ",
     side_title,
-    ": EACH \"#\" IS ",
+    " COLUMN IS ",
     hash_size,
-    "; EACH \".\" IS ",
-    dot_meaning
+    ". EACH \".\" IS ",
+    dot_meaning,
+    "."
   )
+}
+
+resolve_table_style <- function(table_style) {
+  switch(
+    table_style,
+    custom = list(
+      layout = "persons-left",
+      item_scale = "difficulty",
+      person_display = "labels",
+      item_display = "labels",
+      axis_style = "single",
+      right_measure = FALSE,
+      preset_label_width = 32L,
+      preset_line_length = NULL
+    ),
+    `table1.0` = list(
+      layout = "persons-left",
+      item_scale = "difficulty",
+      person_display = "labels",
+      item_display = "labels",
+      axis_style = "single",
+      right_measure = FALSE,
+      preset_label_width = 32L,
+      preset_line_length = NULL
+    ),
+    `table1.1` = list(
+      layout = "persons-left",
+      item_scale = "difficulty",
+      person_display = "distribution",
+      item_display = "distribution",
+      axis_style = "single",
+      right_measure = FALSE,
+      preset_label_width = 10L,
+      preset_line_length = NULL
+    ),
+    `table1.2` = list(
+      layout = "persons-left",
+      item_scale = "difficulty",
+      person_display = "distribution",
+      item_display = "labels",
+      axis_style = "single",
+      right_measure = FALSE,
+      preset_label_width = 18L,
+      preset_line_length = 80L
+    ),
+    `table1.3` = list(
+      layout = "items-left",
+      item_scale = "difficulty",
+      person_display = "labels",
+      item_display = "distribution",
+      axis_style = "single",
+      right_measure = FALSE,
+      preset_label_width = 18L,
+      preset_line_length = 80L
+    ),
+    `table1.10` = list(
+      layout = "persons-left",
+      item_scale = "easiness",
+      person_display = "labels",
+      item_display = "labels",
+      axis_style = "double",
+      right_measure = FALSE,
+      preset_label_width = 20L,
+      preset_line_length = NULL
+    ),
+    `table1.11` = list(
+      layout = "persons-left",
+      item_scale = "easiness",
+      person_display = "distribution",
+      item_display = "distribution",
+      axis_style = "double",
+      right_measure = TRUE,
+      preset_label_width = 8L,
+      preset_line_length = NULL
+    ),
+    `table1.12` = list(
+      layout = "persons-left",
+      item_scale = "easiness",
+      person_display = "distribution",
+      item_display = "labels",
+      axis_style = "double",
+      right_measure = FALSE,
+      preset_label_width = 14L,
+      preset_line_length = 80L
+    ),
+    `table1.13` = list(
+      layout = "items-left",
+      item_scale = "easiness",
+      person_display = "labels",
+      item_display = "distribution",
+      axis_style = "double",
+      right_measure = FALSE,
+      preset_label_width = 14L,
+      preset_line_length = 80L
+    )
+  )
+}
+
+transform_item_display_measures <- function(item_measures, person_measures, item_scale = c("difficulty", "easiness")) {
+  item_scale <- match.arg(item_scale)
+
+  if (item_scale == "difficulty") {
+    return(as.numeric(item_measures))
+  }
+
+  person_anchor <- mean(person_measures)
+  item_anchor <- mean(item_measures)
+  person_anchor + item_anchor - item_measures
+}
+
+direction_labels_for_side <- function(side_kind = c("person", "item"), item_scale = c("difficulty", "easiness")) {
+  side_kind <- match.arg(side_kind)
+  item_scale <- match.arg(item_scale)
+
+  if (side_kind == "person") {
+    return(list(top = "<more>", bottom = "<less>"))
+  }
+
+  if (item_scale == "difficulty") {
+    list(top = "<rare>", bottom = "<freq>")
+  } else {
+    list(top = "<freq>", bottom = "<rare>")
+  }
+}
+
+resolve_side_widths <- function(
+    desired_left_width,
+    desired_right_width,
+    left_mode,
+    right_mode,
+    name_trunc,
+    fixed_width,
+    line_length = NULL
+) {
+  left_width <- as.integer(desired_left_width)
+  right_width <- as.integer(desired_right_width)
+
+  if (is.null(line_length)) {
+    return(list(left_width = left_width, right_width = right_width))
+  }
+
+  if (!is.numeric(line_length) || length(line_length) != 1L || !is.finite(line_length) || line_length < 20) {
+    stop("'line_length' must be NULL or a single number of at least 20.", call. = FALSE)
+  }
+
+  available_width <- as.integer(line_length) - fixed_width
+  min_left <- if (left_mode == "distribution") 1L else max(4L, min(as.integer(name_trunc), 4L))
+  min_right <- if (right_mode == "distribution") 1L else max(4L, min(as.integer(name_trunc), 4L))
+
+  if (available_width < (min_left + min_right)) {
+    stop("'line_length' is too small for the requested map layout.", call. = FALSE)
+  }
+
+  while ((left_width + right_width) > available_width) {
+    left_excess <- left_width - min_left
+    right_excess <- right_width - min_right
+
+    if (left_excess <= 0L && right_excess <= 0L) {
+      break
+    }
+
+    if (left_excess >= right_excess && left_excess > 0L) {
+      left_width <- left_width - 1L
+    } else if (right_excess > 0L) {
+      right_width <- right_width - 1L
+    } else {
+      left_width <- left_width - 1L
+    }
+  }
+
+  list(left_width = left_width, right_width = right_width)
+}
+
+paginate_wright_lines <- function(header_lines, body_lines, footer_lines = character(), max_page = NULL) {
+  if (is.null(max_page) || !is.finite(max_page) || max_page <= 0L) {
+    return(list(c(header_lines, body_lines, footer_lines)))
+  }
+
+  if (!is.numeric(max_page) || length(max_page) != 1L || max_page < (length(header_lines) + 2L)) {
+    stop("'max_page' must allow repeated headers plus at least one body row.", call. = FALSE)
+  }
+
+  max_page <- as.integer(max_page)
+  final_capacity <- max_page - length(header_lines) - length(footer_lines)
+  interim_capacity <- max_page - length(header_lines)
+
+  if (final_capacity < 1L || interim_capacity < 1L) {
+    stop("'max_page' is too small for the requested page footer.", call. = FALSE)
+  }
+
+  if (length(header_lines) + length(body_lines) + length(footer_lines) <= max_page) {
+    return(list(c(header_lines, body_lines, footer_lines)))
+  }
+
+  pages <- list()
+  remaining <- body_lines
+
+  while (length(remaining) > final_capacity) {
+    take <- min(interim_capacity, length(remaining) - final_capacity)
+    pages[[length(pages) + 1L]] <- c(header_lines, remaining[seq_len(take)])
+    remaining <- remaining[-seq_len(take)]
+  }
+
+  pages[[length(pages) + 1L]] <- c(header_lines, remaining, footer_lines)
+  pages
+}
+
+flatten_wright_pages <- function(pages, page_break = "\f") {
+  if (!length(pages)) {
+    return(character())
+  }
+
+  out <- pages[[1L]]
+  if (length(pages) == 1L) {
+    return(out)
+  }
+
+  for (i in 2:length(pages)) {
+    out <- c(out, page_break, pages[[i]])
+  }
+
+  out
 }
 
 #' Create a Winsteps-inspired ASCII Wright map
@@ -676,6 +921,10 @@ build_distribution_note <- function(side_title, hash_size) {
 #' @param person_scores Optional raw person scores. When `persons` is a data
 #'   frame, a `score` column is used automatically unless overridden here. Each
 #'   unique score is shown once at the representative location of that score.
+#' @param table_style Optional Winsteps-inspired preset. `"table1.0"` to
+#'   `"table1.3"` cover the standard difficulty-oriented layouts and
+#'   `"table1.10"` to `"table1.13"` cover mirrored easiness-oriented layouts.
+#'   `"custom"` leaves the individual display options untouched.
 #' @param score_method How to place raw score labels on the latent scale.
 #'   `"rasch"` estimates the score location from the item difficulties under a
 #'   dichotomous Rasch model; `"observed"` uses the average observed person
@@ -699,6 +948,15 @@ build_distribution_note <- function(side_title, hash_size) {
 #' @param axis_style Whether to render the center as a single axis (`"+"` / `"|"`)
 #'   or a double axis (`"++"` / `"||"`), closer to Winsteps mirrored tables.
 #' @param right_measure Show a mirrored measure column on the far right.
+#' @param layout Which side appears on the left: persons or items.
+#' @param item_scale Whether item locations are rendered as difficulties or as
+#'   mirrored easiness locations.
+#' @param line_length Optional maximum output width, similar to Winsteps
+#'   `LINELENGTH=`.
+#' @param max_page Optional maximum number of output lines per page, similar to
+#'   Winsteps `MAXPAGE=`.
+#' @param page_break Marker inserted between rendered pages when `max_page`
+#'   creates multiple pages.
 #' @param measure_header Heading shown above the logit column.
 #' @param score_header Heading shown above the optional score column.
 #' @param more_label Top-left direction label.
@@ -706,6 +964,8 @@ build_distribution_note <- function(side_title, hash_size) {
 #' @param less_label Bottom-left direction label.
 #' @param freq_label Bottom-right direction label.
 #' @param label_width Total width reserved for each side.
+#' @param person_width Optional width override for the person side.
+#' @param item_width Optional width override for the item side.
 #' @param name_trunc Maximum width of each individual label.
 #' @param label_abbrev Label abbreviation strategy. `"truncate"` clips labels at
 #'   the available width; `"smart"` removes low-information words and compresses
@@ -723,6 +983,17 @@ wright_map_ascii <- function(
     person_labels = NULL,
     item_labels = NULL,
     person_scores = NULL,
+    table_style = c(
+      "custom",
+      "table1.0",
+      "table1.1",
+      "table1.2",
+      "table1.3",
+      "table1.10",
+      "table1.11",
+      "table1.12",
+      "table1.13"
+    ),
     score_method = c("rasch", "observed"),
     score_extreme_adjust = 0.3,
     lines_per_logit = 2L,
@@ -736,6 +1007,11 @@ wright_map_ascii <- function(
     item_hash_size = NULL,
     axis_style = c("single", "double"),
     right_measure = FALSE,
+    layout = c("persons-left", "items-left"),
+    item_scale = c("difficulty", "easiness"),
+    line_length = NULL,
+    max_page = NULL,
+    page_break = "\f",
     measure_header = "MEASURE",
     score_header = "SCORE",
     more_label = "<more>",
@@ -743,12 +1019,24 @@ wright_map_ascii <- function(
     less_label = "<less>",
     freq_label = "<freq>",
     label_width = 32L,
+    person_width = NULL,
+    item_width = NULL,
     name_trunc = 8L,
     label_abbrev = c("truncate", "smart"),
     label_overrides = NULL,
     digits = 0L,
     score_digits = 0L
 ) {
+  table_style_missing <- missing(table_style)
+  person_display_missing <- missing(person_display)
+  item_display_missing <- missing(item_display)
+  axis_style_missing <- missing(axis_style)
+  right_measure_missing <- missing(right_measure)
+  layout_missing <- missing(layout)
+  item_scale_missing <- missing(item_scale)
+  label_width_missing <- missing(label_width)
+  line_length_missing <- missing(line_length)
+
   person_df <- normalize_wright_input(
     persons,
     labels = person_labels,
@@ -757,12 +1045,43 @@ wright_map_ascii <- function(
   )
   item_df <- normalize_wright_input(items, labels = item_labels, side = "item")
 
+  table_style <- match.arg(table_style)
+  preset <- resolve_table_style(table_style)
+  if (table_style != "custom" || !table_style_missing) {
+    if (person_display_missing) {
+      person_display <- preset$person_display
+    }
+    if (item_display_missing) {
+      item_display <- preset$item_display
+    }
+    if (axis_style_missing) {
+      axis_style <- preset$axis_style
+    }
+    if (right_measure_missing) {
+      right_measure <- preset$right_measure
+    }
+    if (layout_missing) {
+      layout <- preset$layout
+    }
+    if (item_scale_missing) {
+      item_scale <- preset$item_scale
+    }
+    if (label_width_missing) {
+      label_width <- preset$preset_label_width
+    }
+    if (line_length_missing) {
+      line_length <- preset$preset_line_length
+    }
+  }
+
   person_display <- match.arg(person_display)
   item_display <- match.arg(item_display)
   distribution_style <- match.arg(distribution_style)
   axis_style <- match.arg(axis_style)
   score_method <- match.arg(score_method)
   label_abbrev <- match.arg(label_abbrev)
+  layout <- match.arg(layout)
+  item_scale <- match.arg(item_scale)
 
   if (!is.numeric(lines_per_logit) || length(lines_per_logit) != 1L || lines_per_logit < 1) {
     stop("'lines_per_logit' must be a positive integer.", call. = FALSE)
@@ -770,11 +1089,24 @@ wright_map_ascii <- function(
 
   lines_per_logit <- as.integer(lines_per_logit)
   label_width <- as.integer(label_width)
+  if (!is.null(person_width)) {
+    person_width <- as.integer(person_width)
+  }
+  if (!is.null(item_width)) {
+    item_width <- as.integer(item_width)
+  }
   name_trunc <- as.integer(name_trunc)
   digits <- as.integer(digits)
   score_digits <- as.integer(score_digits)
 
-  all_values <- c(person_df$measure, item_df$measure)
+  item_display_df <- item_df
+  item_display_df$measure <- transform_item_display_measures(
+    item_measures = item_df$measure,
+    person_measures = person_df$measure,
+    item_scale = item_scale
+  )
+
+  all_values <- c(person_df$measure, item_display_df$measure)
 
   if (is.null(measure_range)) {
     lower <- floor(min(all_values))
@@ -792,35 +1124,7 @@ wright_map_ascii <- function(
   n_rows <- length(axis_values)
 
   person_df$row <- measure_to_row(person_df$measure, top = upper, step = step, n_rows = n_rows)
-  item_df$row <- measure_to_row(item_df$measure, top = upper, step = step, n_rows = n_rows)
-
-  person_side <- build_side_rows(
-    data = person_df,
-    n_rows = n_rows,
-    width = label_width,
-    mode = person_display,
-    distribution_style = distribution_style,
-    name_trunc = name_trunc,
-    hash_size = person_hash_size,
-    label_abbrev = label_abbrev,
-    label_overrides = label_overrides,
-    side = "person"
-  )
-  item_side <- build_side_rows(
-    data = item_df,
-    n_rows = n_rows,
-    width = label_width,
-    mode = item_display,
-    distribution_style = distribution_style,
-    name_trunc = name_trunc,
-    hash_size = item_hash_size,
-    label_abbrev = label_abbrev,
-    label_overrides = label_overrides,
-    side = "item"
-  )
-
-  person_stats <- stat_rows(person_df$measure, top = upper, step = step, n_rows = n_rows)
-  item_stats <- stat_rows(item_df$measure, top = upper, step = step, n_rows = n_rows)
+  item_display_df$row <- measure_to_row(item_display_df$measure, top = upper, step = step, n_rows = n_rows)
 
   measure_col_width <- max(
     7L,
@@ -848,22 +1152,87 @@ wright_map_ascii <- function(
     digits = score_digits,
     method = score_method,
     item_measures = item_df$measure,
-    extreme_adjust = score_extreme_adjust
+    extreme_adjust = score_extreme_adjust,
+    min_score = 0,
+    max_score = length(item_df$measure)
   )
 
   header_width <- measure_col_width + if (score_rows$has_scores) score_col_width + 1L else 0L
   spacer <- "  "
   axis_col_width <- if (axis_style == "double") 4L else 3L
   right_measure_width <- if (isTRUE(right_measure)) measure_col_width + nchar(spacer) else 0L
-  total_width <- header_width + nchar(spacer) + label_width + 1L + axis_col_width + 1L + label_width + right_measure_width
+  fixed_width <- header_width + nchar(spacer) + 1L + axis_col_width + 1L + right_measure_width
 
-  notes <- c(
-    if (person_side$compressed) build_distribution_note(person_title, person_side$hash_size),
-    if (item_side$compressed) build_distribution_note(item_title, item_side$hash_size)
+  resolved_person_width <- if (is.null(person_width)) label_width else person_width
+  resolved_item_width <- if (is.null(item_width)) label_width else item_width
+
+  left_kind <- if (layout == "persons-left") "person" else "item"
+  right_kind <- if (layout == "persons-left") "item" else "person"
+  left_title <- if (layout == "persons-left") person_title else item_title
+  right_title <- if (layout == "persons-left") item_title else person_title
+  left_mode <- if (layout == "persons-left") person_display else item_display
+  right_mode <- if (layout == "persons-left") item_display else person_display
+  left_hash_override <- if (layout == "persons-left") person_hash_size else item_hash_size
+  right_hash_override <- if (layout == "persons-left") item_hash_size else person_hash_size
+  desired_left_width <- if (layout == "persons-left") resolved_person_width else resolved_item_width
+  desired_right_width <- if (layout == "persons-left") resolved_item_width else resolved_person_width
+
+  widths <- resolve_side_widths(
+    desired_left_width = desired_left_width,
+    desired_right_width = desired_right_width,
+    left_mode = left_mode,
+    right_mode = right_mode,
+    name_trunc = name_trunc,
+    fixed_width = fixed_width,
+    line_length = line_length
   )
 
-  lines <- character(length = n_rows + 3L + length(notes))
-  title_right <- paste(person_title, "-", "MAP", "-", item_title)
+  left_df <- if (layout == "persons-left") person_df else item_display_df
+  right_df <- if (layout == "persons-left") item_display_df else person_df
+  left_side <- build_side_rows(
+    data = left_df,
+    n_rows = n_rows,
+    width = widths$left_width,
+    mode = left_mode,
+    distribution_style = distribution_style,
+    name_trunc = name_trunc,
+    hash_size = left_hash_override,
+    label_abbrev = label_abbrev,
+    label_overrides = label_overrides,
+    side = left_kind
+  )
+  right_side <- build_side_rows(
+    data = right_df,
+    n_rows = n_rows,
+    width = widths$right_width,
+    mode = right_mode,
+    distribution_style = distribution_style,
+    name_trunc = name_trunc,
+    hash_size = right_hash_override,
+    label_abbrev = label_abbrev,
+    label_overrides = label_overrides,
+    side = right_kind
+  )
+
+  left_stats <- stat_rows(left_df$measure, top = upper, step = step, n_rows = n_rows)
+  right_stats <- stat_rows(right_df$measure, top = upper, step = step, n_rows = n_rows)
+
+  person_direction <- list(top = more_label, bottom = less_label)
+  item_direction <- if (item_scale == "difficulty") {
+    list(top = rare_label, bottom = freq_label)
+  } else {
+    list(top = freq_label, bottom = rare_label)
+  }
+  left_direction <- if (left_kind == "person") person_direction else item_direction
+  right_direction <- if (right_kind == "person") person_direction else item_direction
+
+  notes <- c(
+    if (left_side$compressed) build_distribution_note(left_title, left_side$hash_size),
+    if (right_side$compressed) build_distribution_note(right_title, right_side$hash_size)
+  )
+
+  map_width <- widths$left_width + 1L + axis_col_width + 1L + widths$right_width
+  title_right <- truncate_text(paste(left_title, "-", "MAP", "-", right_title), map_width)
   header_text <- if (score_rows$has_scores) {
     paste0(
       sprintf("%*s", score_col_width, score_header),
@@ -874,39 +1243,42 @@ wright_map_ascii <- function(
     sprintf("%*s", measure_col_width, measure_header)
   }
 
-  lines[1L] <- paste0(
+  header_lines <- character(2L)
+  header_lines[1L] <- paste0(
     header_text,
     spacer,
-    sprintf("%-*s", total_width - header_width - nchar(spacer) - right_measure_width, title_right),
+    sprintf("%-*s", map_width, title_right),
     if (isTRUE(right_measure)) paste0(spacer, sprintf("%*s", measure_col_width, measure_header)) else ""
   )
 
-  lines[2L] <- build_axis_aligned_line(
-    left_text = more_label,
-    right_text = rare_label,
+  header_lines[2L] <- build_axis_aligned_line(
+    left_text = left_direction$top,
+    right_text = right_direction$top,
     header_width = header_width,
     spacer = spacer,
-    side_width = label_width,
+    left_width = widths$left_width,
+    right_width = widths$right_width,
     axis_text = if (axis_style == "double") "-++-" else "|",
     trailing_width = right_measure_width
   )
 
+  body_lines <- character(n_rows)
   for (i in seq_len(n_rows)) {
-    person_marks <- c(
-      if (person_stats["T_top"] == i || person_stats["T_bottom"] == i) "T",
-      if (person_stats["S_top"] == i || person_stats["S_bottom"] == i) "S",
-      if (person_stats["M"] == i) "M"
+    left_marks <- c(
+      if (left_stats["T_top"] == i || left_stats["T_bottom"] == i) "T",
+      if (left_stats["S_top"] == i || left_stats["S_bottom"] == i) "S",
+      if (left_stats["M"] == i) "M"
     )
-    item_marks <- c(
-      if (item_stats["T_top"] == i || item_stats["T_bottom"] == i) "T",
-      if (item_stats["S_top"] == i || item_stats["S_bottom"] == i) "S",
-      if (item_stats["M"] == i) "M"
+    right_marks <- c(
+      if (right_stats["T_top"] == i || right_stats["T_bottom"] == i) "T",
+      if (right_stats["S_top"] == i || right_stats["S_bottom"] == i) "S",
+      if (right_stats["M"] == i) "M"
     )
 
     axis_text <- build_axis_cell(
       axis_value = axis_values[i],
-      person_marks = person_marks,
-      item_marks = item_marks,
+      left_marks = left_marks,
+      right_marks = right_marks,
       axis_style = axis_style
     )
 
@@ -934,46 +1306,68 @@ wright_map_ascii <- function(
       ""
     }
 
-    lines[i + 2L] <- paste0(
+    body_lines[i] <- paste0(
       score_prefix,
       measure_text,
       spacer,
-      person_side$render(i, align = "right"),
+      left_side$render(i, align = "right"),
       " ",
       axis_text,
       " ",
-      item_side$render(i, align = "left"),
+      right_side$render(i, align = "left"),
       right_measure_text
     )
   }
 
-  bottom_index <- n_rows + 3L
-  lines[bottom_index] <- build_axis_aligned_line(
-    left_text = less_label,
-    right_text = freq_label,
+  footer_lines <- build_axis_aligned_line(
+    left_text = left_direction$bottom,
+    right_text = right_direction$bottom,
     header_width = header_width,
     spacer = spacer,
-    side_width = label_width,
+    left_width = widths$left_width,
+    right_width = widths$right_width,
     axis_text = if (axis_style == "double") "-++-" else "|",
     trailing_width = right_measure_width
   )
 
   if (length(notes)) {
-    for (j in seq_along(notes)) {
-      lines[bottom_index + j] <- paste0(strrep(" ", header_width + nchar(spacer)), notes[j])
-    }
+    footer_lines <- c(
+      footer_lines,
+      vapply(
+        notes,
+        function(note) paste0(strrep(" ", header_width + nchar(spacer)), note),
+        character(1)
+      )
+    )
   }
+
+  pages <- paginate_wright_lines(
+    header_lines = header_lines,
+    body_lines = body_lines,
+    footer_lines = footer_lines,
+    max_page = max_page
+  )
+  lines <- flatten_wright_pages(pages = pages, page_break = page_break)
 
   structure(
     list(
       lines = lines,
+      pages = pages,
       axis_values = axis_values,
       persons = person_df,
-      items = item_df,
+      items = item_display_df,
+      items_original = item_df,
       settings = list(
+        table_style = table_style,
         lines_per_logit = lines_per_logit,
         measure_range = c(lower, upper),
         label_width = label_width,
+        person_width = resolved_person_width,
+        item_width = resolved_item_width,
+        left_width = widths$left_width,
+        right_width = widths$right_width,
+        measure_col_width = measure_col_width,
+        score_col_width = score_col_width,
         name_trunc = name_trunc,
         label_abbrev = label_abbrev,
         digits = digits,
@@ -984,11 +1378,17 @@ wright_map_ascii <- function(
         person_display = person_display,
         item_display = item_display,
         distribution_style = distribution_style,
-        person_hash_size = person_side$hash_size,
-        item_hash_size = item_side$hash_size,
+        person_hash_size = if (layout == "persons-left") left_side$hash_size else right_side$hash_size,
+        item_hash_size = if (layout == "persons-left") right_side$hash_size else left_side$hash_size,
         has_scores = score_rows$has_scores,
         axis_style = axis_style,
-        right_measure = isTRUE(right_measure)
+        right_measure = isTRUE(right_measure),
+        layout = layout,
+        item_scale = item_scale,
+        line_length = line_length,
+        max_page = max_page,
+        page_break = page_break,
+        page_count = length(pages)
       )
     ),
     class = "ascii_wright_map"
@@ -996,8 +1396,20 @@ wright_map_ascii <- function(
 }
 
 #' @export
-format.ascii_wright_map <- function(x, ...) {
-  x$lines
+format.ascii_wright_map <- function(x, ..., page = NULL, page_break = NULL) {
+  if (is.null(x$pages)) {
+    return(x$lines)
+  }
+
+  if (!is.null(page)) {
+    if (!is.numeric(page) || length(page) != 1L || page < 1L || page > length(x$pages)) {
+      stop("'page' must select one of the available pages.", call. = FALSE)
+    }
+    return(x$pages[[as.integer(page)]])
+  }
+
+  resolved_page_break <- if (is.null(page_break)) x$settings$page_break else page_break
+  flatten_wright_pages(x$pages, page_break = resolved_page_break)
 }
 
 #' @export

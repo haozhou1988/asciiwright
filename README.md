@@ -8,11 +8,14 @@
 
 - 把 person 与 item measure 放到同一条潜变量纵轴上
 - 可选显示 `SCORE` 列，把原始分数一起对齐到纵轴
+- `SCORE` 列支持更接近 Winsteps `EXTRSCORE` 的极端分数 inward adjustment
 - 用固定宽度文本输出，适合终端、`capture.output()`、markdown 代码块和纯文本报告
 - 在轴心位置标出 `M / S / T`，分别表示均值、1 个标准差、2 个标准差
 - 支持左右两侧分别显示为标签列表或压缩分布列，可覆盖 Table 1.0、1.1、1.2、1.3 这几类核心布局
+- 支持 `table_style` 预设，直接切到 Table 1.10、1.11、1.12、1.13 这类 mirrored easiness 版本
 - 分布列支持更接近 Winsteps 的自动规则：放得下时显示 `X`，放不下时自动切换到 `#` / `.`
 - 可选双轴样式 `++ / ||` 和右侧 `MEASURE` 列，更接近 Winsteps 的 mirrored tables
+- 支持 `line_length` 和 `max_page`，可以更像 Winsteps 的 `LINELENGTH=` 和 `MAXPAGE=`
 - 提供 `score_table_ascii()`，从 item difficulty 生成 Winsteps Table 20.1 风格的 raw score-to-measure 表
 - 提供 `polytomous_threshold_map_ascii()`，生成 polytomous item 的 half-point / Thurstonian / Andrich / category-center threshold maps
 - 提供 `polytomous_range_map_ascii()`，生成 Table 1.4 风格的 `BOTTOM / MEASURE / TOP` 三列 polytomous range map
@@ -155,6 +158,26 @@ map <- wright_map_ascii(
 cat(as.character(map))
 ```
 
+Table 1 预设与分页示例：
+
+```r
+map_ease <- wright_map_ascii(
+  persons = dat$persons,
+  items = dat$items,
+  table_style = "table1.12",
+  line_length = 80
+)
+
+map_pages <- wright_map_ascii(
+  persons = dat$persons,
+  items = dat$items,
+  max_page = 12
+)
+
+cat(as.character(map_ease))
+cat(format(map_pages, page = 1), sep = "\n")
+```
+
 ## 设计说明
 
 这个版本优先复刻 Winsteps 页面里最核心的文本形态：
@@ -162,11 +185,13 @@ cat(as.character(map))
 - Table 1.0：左右两侧都显示标签
 - Table 1.1：左右两侧都显示分布
 - Table 1.2 / 1.3：一侧分布、一侧标签
+- Table 1.10 / 1.11 / 1.12 / 1.13：mirrored easiness 版本
 
 当前 `SCORE` 列是根据传入的 `person_scores` 或 person 数据框里的 `score` 列，按代表性位置对齐显示的。相同原始分数会合并为一次显示，而不是在多行里重复出现。
 默认的 `score_method = "rasch"` 会用 item difficulty 反推 raw score 在潜变量上的位置；如果你只想按观测样本位置摆放，也可以切回 `score_method = "observed"`。
+极端分数的默认 inward adjustment 是 `0.3`，可以用 `score_extreme_adjust` 调整。
 
-当前双轴样式主要对齐 Winsteps 的文本观感与镜像信息布局，仍然不是其全部内部表格参数的逐项复刻。
+当前双轴样式、`line_length`、`max_page` 和 mirrored easiness 布局主要对齐 Winsteps 的文本观感与主要控制参数，仍然不是其全部内部表格参数的逐项复刻。
 
 导出示例：
 

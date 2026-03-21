@@ -53,7 +53,7 @@ test_that("wright_map_ascii supports distribution views", {
 
   expect_match(as.character(mixed), "X", fixed = TRUE)
   expect_match(as.character(dense), "#", fixed = TRUE)
-  expect_match(as.character(dense), "EACH \"#\" IS", fixed = TRUE)
+  expect_match(as.character(dense), "EACH \"#\" IN THE PERSON COLUMN IS", fixed = TRUE)
   expect_equal(mixed$settings$person_display, "distribution")
   expect_equal(dense$settings$item_display, "distribution")
 })
@@ -142,6 +142,97 @@ test_that("wright_map_ascii supports double-axis mirrored measure layout", {
   expect_true(any(grepl("\\|\\|", rendered)))
   expect_true(map$settings$right_measure)
   expect_equal(map$settings$axis_style, "double")
+})
+
+test_that("wright_map_ascii supports Winsteps table presets and swapped sides", {
+  dat <- example_wright_data()
+
+  map <- wright_map_ascii(
+    dat$persons,
+    dat$items,
+    table_style = "table1.13",
+    line_length = 68
+  )
+
+  rendered <- format(map)
+  expect_match(rendered[1], "ITEM - MAP - PERSON", fixed = TRUE)
+  expect_match(rendered[2], "<freq>-\\+\\+-<more>")
+  expect_match(rendered[length(rendered)], "<rare>-\\+\\+-<less>")
+  expect_equal(map$settings$table_style, "table1.13")
+  expect_equal(map$settings$layout, "items-left")
+  expect_equal(map$settings$item_scale, "easiness")
+})
+
+test_that("wright_map_ascii can shrink output to a requested line length", {
+  dat <- example_wright_data()
+
+  map <- wright_map_ascii(
+    dat$persons,
+    dat$items,
+    table_style = "table1.12",
+    line_length = 40
+  )
+
+  rendered <- format(map)
+  expect_true(all(nchar(rendered, type = "width") <= 70))
+  expect_true(map$settings$left_width + map$settings$right_width < 2 * map$settings$label_width)
+})
+
+test_that("wright_map_ascii paginates long maps with repeated headers", {
+  dat <- example_wright_data()
+
+  map <- wright_map_ascii(dat$persons, dat$items, max_page = 10)
+
+  expect_gt(length(map$pages), 1L)
+  expect_equal(map$settings$page_count, length(map$pages))
+  expect_true(any(format(map) == "\f"))
+  expect_false(any(format(map, page = 2) == "\f"))
+  expect_match(format(map, page = 2)[1], "MEASURE", fixed = TRUE)
+  expect_match(format(map, page = 2)[2], "<more>|<rare>", fixed = TRUE)
+})
+
+test_that("wright_map_ascii uses score_extreme_adjust to pull extreme scores inward", {
+  persons <- c(a = 2, b = -2)
+  items <- c(i1 = 0, i2 = 0, i3 = 0, i4 = 0, i5 = 0)
+  scores <- c(5, 0)
+
+  map_low <- wright_map_ascii(
+    persons,
+    items,
+    person_scores = scores,
+    person_display = "distribution",
+    item_display = "distribution",
+    measure_range = c(-5, 5),
+    lines_per_logit = 2,
+    label_width = 4,
+    score_extreme_adjust = 0.3
+  )
+  map_high <- wright_map_ascii(
+    persons,
+    items,
+    person_scores = scores,
+    person_display = "distribution",
+    item_display = "distribution",
+    measure_range = c(-5, 5),
+    lines_per_logit = 2,
+    label_width = 4,
+    score_extreme_adjust = 0.8
+  )
+
+  low_prefix <- trimws(substr(format(map_low), 1L, map_low$settings$score_col_width))
+  high_prefix <- trimws(substr(format(map_high), 1L, map_high$settings$score_col_width))
+
+  row_top_low <- which(low_prefix == "5")
+  row_top_high <- which(high_prefix == "5")
+  row_bottom_low <- which(low_prefix == "0")
+  row_bottom_high <- which(high_prefix == "0")
+
+  expect_equal(length(row_top_low), 1L)
+  expect_equal(length(row_top_high), 1L)
+  expect_equal(length(row_bottom_low), 1L)
+  expect_equal(length(row_bottom_high), 1L)
+  expect_gt(row_top_high, row_top_low)
+  expect_lt(row_bottom_high, row_bottom_low)
 })
 
 test_that("wright_map_ascii supports smart abbreviations and label overrides", {

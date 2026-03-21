@@ -8,6 +8,8 @@ wright_map_ascii(
   person_labels = NULL,
   item_labels = NULL,
   person_scores = NULL,
+  table_style = c("custom", "table1.0", "table1.1", "table1.2", "table1.3",
+    "table1.10", "table1.11", "table1.12", "table1.13"),
   score_method = c("rasch", "observed"),
   score_extreme_adjust = 0.3,
   lines_per_logit = 2L,
@@ -21,6 +23,11 @@ wright_map_ascii(
   item_hash_size = NULL,
   axis_style = c("single", "double"),
   right_measure = FALSE,
+  layout = c("persons-left", "items-left"),
+  item_scale = c("difficulty", "easiness"),
+  line_length = NULL,
+  max_page = NULL,
+  page_break = "\f",
   measure_header = "MEASURE",
   score_header = "SCORE",
   more_label = "<more>",
@@ -28,6 +35,8 @@ wright_map_ascii(
   less_label = "<less>",
   freq_label = "<freq>",
   label_width = 32L,
+  person_width = NULL,
+  item_width = NULL,
   name_trunc = 8L,
   label_abbrev = c("truncate", "smart"),
   label_overrides = NULL,
@@ -41,6 +50,7 @@ wright_map_ascii(
   \item{person_labels}{Optional labels for person measures.}
   \item{item_labels}{Optional labels for item measures.}
   \item{person_scores}{Optional raw person scores. If \code{persons} is a data frame, a \code{score} column is used automatically unless overridden here. Each unique score is shown once at the representative location of that score.}
+  \item{table_style}{Optional Winsteps-inspired preset. \code{"table1.0"} to \code{"table1.3"} cover the standard difficulty-oriented layouts and \code{"table1.10"} to \code{"table1.13"} cover mirrored easiness-oriented layouts. \code{"custom"} leaves the individual display options untouched.}
   \item{score_method}{How to place raw score labels on the latent scale. \code{"rasch"} estimates the score location from the item difficulties under a dichotomous Rasch model; \code{"observed"} uses the average observed person measure for each score group.}
   \item{score_extreme_adjust}{Adjustment used for extreme raw scores when \code{score_method = "rasch"}.}
   \item{lines_per_logit}{Number of text rows per logit interval.}
@@ -54,6 +64,11 @@ wright_map_ascii(
   \item{item_hash_size}{Optional override for the number of items represented by one \code{\#} in grouped distributions.}
   \item{axis_style}{Whether to render the center as a single axis (\code{"+"}/\code{"|"}) or a double axis (\code{"++"}/\code{"||"}), closer to Winsteps mirrored tables.}
   \item{right_measure}{Show a mirrored measure column on the far right.}
+  \item{layout}{Which side appears on the left: persons or items.}
+  \item{item_scale}{Whether item locations are rendered as difficulties or as mirrored easiness locations.}
+  \item{line_length}{Optional maximum output width, similar to Winsteps \code{LINELENGTH=}.}
+  \item{max_page}{Optional maximum number of output lines per page, similar to Winsteps \code{MAXPAGE=}.}
+  \item{page_break}{Marker inserted between rendered pages when \code{max_page} creates multiple pages.}
   \item{measure_header}{Heading shown above the measure column.}
   \item{score_header}{Heading shown above the optional score column.}
   \item{more_label}{Top-left direction label.}
@@ -61,6 +76,8 @@ wright_map_ascii(
   \item{less_label}{Bottom-left direction label.}
   \item{freq_label}{Bottom-right direction label.}
   \item{label_width}{Character width reserved for each side.}
+  \item{person_width}{Optional width override for the person side.}
+  \item{item_width}{Optional width override for the item side.}
   \item{name_trunc}{Maximum width of each individual label.}
   \item{label_abbrev}{Label abbreviation strategy. \code{"truncate"} clips labels at the available width; \code{"smart"} removes low-information words and compresses longer words before truncating.}
   \item{label_overrides}{Optional user-supplied label abbreviations. This can be a named character vector of exact replacements or a function. Functions receive \code{label}, \code{width}, and \code{side}.}
@@ -79,7 +96,9 @@ be rendered either as labels or as a compact distribution column. Optional
 person raw scores can also be rendered in a dedicated \code{SCORE} column, and
 mirrored layouts can show a second \code{MEASURE} column on the right. By
 default, score locations are estimated from item difficulties under a
-dichotomous Rasch model.
+dichotomous Rasch model. Winsteps-style presets can also switch the main layout
+to mirrored easiness tables, constrain total output width, and paginate the
+rendered text.
 }
 \examples{
 dat <- example_wright_data()
@@ -120,4 +139,13 @@ map4 <- wright_map_ascii(
   label_overrides = c(`Find where animal lives` = "Animal habitat")
 )
 print(map4)
+
+map5 <- wright_map_ascii(
+  dat$persons,
+  dat$items,
+  table_style = "table1.12",
+  line_length = 80,
+  max_page = 12
+)
+print(map5)
 }
