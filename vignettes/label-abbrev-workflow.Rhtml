@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+<!--
+%\VignetteEngine{knitr::knitr_notangle}
+%\VignetteIndexEntry{Label Abbreviation Workflow}
+%\VignetteEncoding{UTF-8}
+-->
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<style type="text/css">
+body { max-width: 900px; margin: 2rem auto; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.55; }
+pre { background: #f6f8fa; padding: 0.9rem; overflow-x: auto; }
+code { font-family: "SFMono-Regular", Menlo, Consolas, monospace; }
+</style>
+<title>Label Abbreviation Workflow</title>
+</head>
+
+<body>
+
+<h1>Label Abbreviation Workflow</h1>
+
+<p>这个 vignette 展示 <code>asciiwright</code> 里最顺手的一条标签工作流：</p>
+
+<ol>
+<li>先预览智能缩写结果</li>
+<li>再手工修改你不满意的标签</li>
+<li>把这些修改转成 <code>label_overrides</code></li>
+<li>最后再生成 ASCII Wright map</li>
+</ol>
+
+<h2>准备数据</h2>
+
+<!--begin.rcode setup
+library(asciiwright)
+
+pdat <- example_polytomous_data()
+labels <- pdat$items
+labels
+end.rcode-->
+
+<h2>第一步：预览缩写</h2>
+
+<p><code>preview_label_abbrev()</code> 会同时给出建议缩写和最终缩写。此时如果还没传 <code>label_overrides</code>，<code>suggested</code> 和 <code>final</code> 会一致。</p>
+
+<!--begin.rcode preview
+preview <- preview_label_abbrev(
+  labels,
+  width = 18,
+  style = "smart",
+  side = "item"
+)
+
+preview
+end.rcode-->
+
+<h2>第二步：手工调整</h2>
+
+<p>你可以直接在 preview 表里修改 <code>final</code> 这一列。下面把两个标签改得更贴近实际报告里的写法。</p>
+
+<!--begin.rcode edit
+preview$final[preview$label == "Read books on animals"] <- "Read books animals"
+preview$final[preview$label == "Find where animal lives"] <- "Animal habitat"
+
+preview
+end.rcode-->
+
+<h2>第三步：生成 overrides</h2>
+
+<p><code>make_label_overrides()</code> 会把 preview 表里的差异提取成一个命名字符向量，这个对象可以直接传给 <code>wright_map_ascii()</code>、<code>polytomous_range_map_ascii()</code> 等函数。</p>
+
+<!--begin.rcode overrides
+overrides <- make_label_overrides(preview)
+overrides
+end.rcode-->
+
+<h2>第四步：出图</h2>
+
+<p>现在把 <code>label_abbrev = "smart"</code> 和刚生成的 <code>label_overrides</code> 一起传进去。</p>
+
+<!--begin.rcode render
+map_custom <- wright_map_ascii(
+  persons = pdat$persons,
+  items = pdat$items,
+  person_display = "distribution",
+  label_width = 18,
+  name_trunc = 18,
+  label_abbrev = "smart",
+  label_overrides = overrides
+)
+
+cat(as.character(map_custom))
+end.rcode-->
+
+<h2>Range map 里按列定制</h2>
+
+<p>如果你想对不同列分别定制标签，可以让 <code>label_overrides</code> 变成一个函数。对于 range map，<code>side</code> 会区分 <code>"item_bottom"</code>、<code>"item_center"</code> 和 <code>"item_top"</code>。</p>
+
+<!--begin.rcode range
+range_map <- polytomous_range_map_ascii(
+  persons = pdat$persons,
+  items = pdat$items[1:2],
+  steps = pdat$steps,
+  person_display = "distribution",
+  item_display = "labels",
+  item_width = 18,
+  name_trunc = 18,
+  label_abbrev = "smart",
+  label_overrides = function(label, width, side) {
+    if (side == "item_bottom") return(paste("Bottom", label))
+    if (side == "item_center") return(paste("Center", label))
+    if (side == "item_top") return(paste("Top", label))
+    label
+  }
+)
+
+cat(as.character(range_map))
+end.rcode-->
+
+<h2>小结</h2>
+
+<ul>
+<li>如果你希望大部分标签自动缩写，只对少数标签人工修正，这条工作流会很顺手。</li>
+<li>如果你想先预览缩写效果，确认对齐和可读性后再正式出图，这条工作流也很适合。</li>
+</ul>
+
+<p>如果后续你打算把这套缩写固定到项目里，直接把 <code>overrides</code> 保存成脚本里的一个命名向量就可以反复复用。</p>
+
+</body>
+</html>

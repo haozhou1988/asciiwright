@@ -32,6 +32,14 @@ devtools::load_all(".")
 R CMD INSTALL .
 ```
 
+安装后也可以用：
+
+```r
+browseVignettes("asciiwright")
+```
+
+查看工作流文档，里面有完整的 `preview -> edit -> override -> render` 示例。
+
 ## 示例
 
 ```r
