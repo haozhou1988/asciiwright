@@ -2,14 +2,14 @@ Package: asciiwright
 Type: Package
 Title: ASCII Wright Maps in R
 Version: 0.16.0
-Author: Codex Assistant [aut, cre]
-Maintainer: Codex Assistant <codex@example.com>
+Author: Hao Zhou [aut, cre]
+Maintainer: Hao Zhou <haozhou@szu.edu.cn>
 Authors@R: c(
     person(
-      given = "Codex",
-      family = "Assistant",
+      given = "Hao",
+      family = "Zhou",
       role = c("aut", "cre"),
-      email = "codex@example.com"
+      email = "haozhou@szu.edu.cn"
     )
   )
 Description: Creates Winsteps-inspired Wright maps as fixed-width ASCII text.
