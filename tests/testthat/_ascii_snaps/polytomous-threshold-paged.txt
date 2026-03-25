@@ -1,0 +1,30 @@
+MEASURE  PERSON - MAP - ITEM - 50% cumulative probabilities
+                           <more>|<rare>
+      4                         T+
+                                 |
+      3                       X  +
+                              X  |
+      2                       X S+T
+                              X  |
+      1                       X  +
+                              X M|  Read books on animals .2
+<PAGE BREAK>
+MEASURE  PERSON - MAP - ITEM - 50% cumulative probabilities
+                           <more>|<rare>
+      0                       X  +  Find where animal lives.
+                              X  |S
+     -1                       X  +
+                              X S|  Watch birds .1
+     -2                       X  +  Go to museum .2...
+                                 |M Find where animal lives.
+<PAGE BREAK>
+MEASURE  PERSON - MAP - ITEM - 50% cumulative probabilities
+                           <more>|<rare>
+     -3                       X  +  Go to zoo .2
+                                T|  Go on picnic .2
+     -4                          +  Go to museum .1
+                                 |S
+     -5                          +  Go to zoo .1
+                                 |
+     -6                          +T Go on picnic .1
+                           <less>|<freq>

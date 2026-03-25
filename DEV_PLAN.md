@@ -9,13 +9,14 @@
 - 已支持 Winsteps 风格的 ASCII Wright map、distribution map、score table、polytomous threshold map、polytomous range map。
 - 已支持 `mirt` 单维模型接口，可直接生成 item / threshold / range 版本的 ASCII map。
 - 已支持智能缩写、自定义 `label_overrides`、缩写预览和从 preview 表生成 overrides。
+- 已支持分页、`LINELENGTH`、Table 1 预设，以及一组覆盖核心 ASCII 布局的 snapshot 风格回归测试。
 
 ## Near-Term Work
 
 - 完善 `mirt` 接口的边界处理：更清晰地区分 dichotomous、polytomous、mixed-format 模型。
 - 增加 `TAM`、`eRm` 等常见 Rasch/IRT 包的适配层。
 - 给 `preview_label_abbrev()` 增加更明显的“人工编辑后回灌”示例和 vignette 级文档。
-- 增加更多 snapshot 风格测试，覆盖长标签、极端分数、窄列宽和多语言标签。
+- 把 snapshot 测试继续扩到更多边界情形，特别是长标签、极端分数、窄列宽和多语言标签。
 
 ## Mid-Term Work
 
@@ -27,6 +28,7 @@
 
 - 建立 GitHub Actions：`R CMD check`、testthat、lintr。
 - 增加 release checklist，保证版本号、README、Rd、测试、示例同步更新。
+- 维护 `NEWS.md`，让版本演进和里程碑变化更容易追踪。
 - 视需要补 `pkgdown` 站点，让控制台示例、文本截图和适配器说明更容易查找。
 
 ## Done Criteria For The Next Milestone

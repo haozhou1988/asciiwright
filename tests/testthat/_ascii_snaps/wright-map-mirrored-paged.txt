@@ -1,0 +1,32 @@
+SCORE MEASURE  PERSON - MAP - ITEM     MEASURE
+                   <more>-++-<freq>
+   15       5            ++T                 5
+   14                    ||  XXX
+            4           T++S X               4
+   13                XX  ||  X
+   12       3         X  ++  XX              3
+                      X  ||
+   11       2       XXX S++                  2
+                         ||  X
+   10       1     XXXXX  ++  X               1
+                         ||
+<PAGE BREAK>
+SCORE MEASURE  PERSON - MAP - ITEM     MEASURE
+                   <more>-++-<freq>
+    9       0  XXXXXXXX M++M                 0
+                   XXXX  ||
+           -1         X  ++                 -1
+    8                XX  ||  X
+<PAGE BREAK>
+SCORE MEASURE  PERSON - MAP - ITEM     MEASURE
+                   <more>-++-<freq>
+    7      -2        XX  ++                 -2
+                        S||  X
+    6      -3        XX  ++  X              -3
+    5                XX  ||
+    4      -4            ++                 -4
+    3                 X T||S X
+           -5         X  ++                 -5
+    2                    ||  XXXX
+    1      -6            ++T                -6
+                   <less>-++-<rare>

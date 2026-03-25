@@ -46,6 +46,8 @@ browseVignettes("asciiwright")
 
 查看工作流文档，里面有完整的 `preview -> edit -> override -> render` 示例。
 
+版本变更摘要见 [NEWS.md](/Users/hao/Desktop/Winstep%20text%20based%20map/NEWS.md)。
+
 ## 示例
 
 ```r

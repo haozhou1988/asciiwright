@@ -1,0 +1,24 @@
+MEASURE  PERSON - MAP - ITEM
+                                     <more>|<rare>
+      5                                    +T 1-3. 1-4. 1-4.
+                                           |  4-1.
+      4                                   T+  1-4.
+                                  Mik Tra  |S
+      3                               Bla  +
+                                      Dav  |
+      2                       Rod Wal Zul S+  1-3. 1-4.
+                                           |
+      1               Aud Jam Kim Ron Wil  +  1-3.
+                                           |
+      0   Ann Bre Don Dor Hel Jan Joe Lis M+
+                          Mar Pet Ric Tho  |M
+     -1                               Sus  +
+                                  Bet Els  |  2-4.
+     -2                           Ber Bri  +  1-4.
+                                          S|
+     -3                           Ada Rch  +
+                                  Bar Car  |  1-3. 3-4.
+     -4                                    +  2-1.
+                                      Lin T|S 1-3.
+     -5                               Fra  +T 1-2. 1-4. 2-3.
+                                     <less>|<freq>
